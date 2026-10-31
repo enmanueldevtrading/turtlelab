@@ -1,0 +1,123 @@
+# Credenciales y entorno
+*.env*
+!.env.example
+keys/
+*.key
+*.pem
+*.p12
+.env.local
+
+# Datos runtime del bot (SQLite local)
+bot/*.db
+bot/bot.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Resultados de backtest (generados, no versionar)
+results/BT-*/
+results/_counter.txt
+results/inventory_cache.json
+
+# Datos descargados (grandes, regenerables)
+data/weltrade/
+data/yahoo/
+SwitchX1800_Dataset/
+*.zip
+
+# Logs y temporales
+*.log
+*.pid
+.panel.pid
+.tmp/
+*.tmp
+
+# IDE y sistema
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+.DS_Store
+
+# OpenCode / herramientas locales
+.agents/
+.freebuff/
+.open-next/
+.wrangler/
+.next/
+
+# Archivos de auditoría y reportes generados
+*.html
+REPORTE_*.txt
+AUDITORIA*.txt
+_audit_*.py
+_audit_*.csv
+_audit_*.log
+_probe_*.py
+forense/
+fix_riesgo/
+intravela/
+m1_tick/
+auditoria_total/
+investigacion_incremental/
+results_fix/
+state/
+bot/*.db
+quant_lab.err.log
+panel_smoke.log
+validate_out.txt
+panel.log
+dev.log
+prod.log
+server.log
+backfill.log
+translate.log
+migrations.sql
+*.traineddata
+eng.traineddata
+
+# Archivos de datos masivos
+*.csv.gz
+*.parquet
+
+# Checklists con credenciales
+checklists/
+
+# Trabajo temporal y auditorias
+_work/
+docs/
+checklists/
+credentials/
+legacy/
+anime-battle/
+archify-demo/
+deriv_prueba/
+quant_lab/
+projects/
+goals/
+state/
+auditoria_total/
+forense/
+fix_riesgo/
+intravela/
+m1_tick/
+investigacion_incremental/
+SwitchX1800_Dataset/
+*.traineddata
+eng.traineddata
+*.zip
+*.html
+REPORTE_*.txt
+AUDITORIA*.txt
+_audit_*.py
+_audit_*.csv
+_audit_*.log
+_probe_*.py
+validate_out.txt
+panel_smoke.log
+quant_lab.err.log
+quant_lab.log
+*.db
+*.sqlite
