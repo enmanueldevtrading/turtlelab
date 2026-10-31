@@ -175,3 +175,6 @@ DespuÃ©s debe explicar al colaborador, en lenguaje natural y sencillo:
 La IA debe mantener actualizado AGENTS.md y README.md cuando cambie el funcionamiento.
 La IA puede usar modelos gratuitos para ayudar a desarrollar, mantener y mejorar el cÃ³digo.
 Si una tarea requiere capacidades no disponibles en un modelo gratuito, debe explicarlo claramente.
+## Licencia
+
+Este proyecto está licenciado bajo la Licencia MIT. Libre para todos: uso comercial, personal, modificación y distribución.
