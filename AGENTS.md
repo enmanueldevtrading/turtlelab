@@ -119,6 +119,13 @@ Para detener: doble clic en `STOP_TURTLE.bat` o cierra la ventana de consola.
 - Costes reales por símbolo.
 - Optimización de consumo de recursos (caché, sin polling innecesario).
 - Corrección de apertura duplicada del navegador.
+- Estrategias modulares (bt/registry.py + bt/sdk.py + bt/plugins/ + user_strategies/).
+- Métrica de fondeo (bt/funding.py): cuenta $6.000, DD total 8%, DD diario 4% (UTC), objetivo 8%.
+- Importación de datasets externos (scripts/import_data.py) y paquetes de datos (scripts/data_pack.py).
+- Interfaz nueva en web/ (HTML/CSS/JS separados, estilo Apple) con vista Fondeo.
+- Guía GUIA_ESTRATEGIAS.txt para crear estrategias con IA.
+- Importación de datos desde el panel (bt/mt5_import.py): pares, temporalidades,
+  velas / ticks / foto del libro de órdenes, secuencial y con progreso.
 
 ## Partes pendientes
 
@@ -139,11 +146,12 @@ Para detener: doble clic en `STOP_TURTLE.bat` o cierra la ventana de consola.
 python scripts/run_bt_tests.py
 ```
 
-Resultado esperado: 25/25 passed.
+Resultado esperado: 32/32 passed.
 
 ## Cómo modificar
 
-1. Añadir estrategia: registrar en `bt/strategies.py` (STRATEGIES + ALIASES + STRATEGY_META).
+1. Añadir estrategia: crear un plugin en `bt/plugins/` (incluida) o `user_strategies/` (propia).
+   Se registra solo; no se edita el motor. Ver GUIA_ESTRATEGIAS.txt.
 2. Ejecutar pruebas: `python scripts/run_bt_tests.py`.
 3. Los datos originales (`data/`) no se modifican.
 4. Los resultados (`results/`) no se sobrescriben (BT-ID incremental).

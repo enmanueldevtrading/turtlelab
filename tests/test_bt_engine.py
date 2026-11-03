@@ -475,3 +475,123 @@ def test_vwap_m15_breakout_entry():
     df_short.loc[2, "close"] = 98.0
     ctx_short = s.prepare(df_short, p)
     assert s.entry_signal(df_short, 2, ctx_short, p) == -1
+
+
+def test_registro_presets():
+    """El registro modular publica todos los presets y resuelve sus parametros."""
+    from bt.strategies import STRATEGY_META, get_strategy
+    esperados = {"turtle20_10", "turtle20_20", "turtle55_20", "ema_cross",
+                 "ema30_75_150", "vwap_session", "vwap_rr12"}
+    assert esperados <= set(STRATEGY_META), sorted(STRATEGY_META)
+    for k, m in STRATEGY_META.items():
+        assert m["label"] and m["tfs"] and m["variants"], k
+        s, p = get_strategy(k)
+        assert hasattr(s, "entry_signal"), k
+        assert isinstance(p, dict), k
+    assert get_strategy("turtle20_20")[1]["exit"] == 20
+    assert get_strategy("turtle55_20")[1]["entry"] == 55
+    assert get_strategy("ema30_75_150")[1]["mid"] == 75
+
+
+def test_plugin_externo_se_carga():
+    """Un plugin nuevo se registra sin tocar el motor ni el panel."""
+    import os
+    import tempfile
+    import textwrap
+    from bt import registry
+    src = textwrap.dedent('''
+        from bt.sdk import BaseStrategy, strategy
+
+        @strategy(id="tmp_probe", label="Probe", desc="prueba", tfs=["D1"],
+                  params={"n": 5})
+        class Probe(BaseStrategy):
+            name = "tmp_probe_cls"
+            defaults = {"n": 5}
+
+            def entry_signal(self, df, i, ctx, p):
+                return 0
+    ''')
+    path = os.path.join(tempfile.mkdtemp(), "probe.py")
+    with open(path, "w") as f:
+        f.write(src)
+    before = dict(registry.STRATEGY_META)
+    try:
+        registry._import_module("probe_tmp", "probe.py", path=path)
+        assert "tmp_probe" in registry.STRATEGY_META
+        s, p = registry.get_strategy("tmp_probe")
+        assert p["n"] == 5 and s.name == "tmp_probe_cls"
+        assert registry.PLUGINS[-1]["ok"] is True
+    finally:
+        registry.STRATEGY_META.clear()
+        registry.STRATEGY_META.update(before)
+        for k in ("tmp_probe", "tmp_probe_cls"):
+            registry.STRATEGIES.pop(k, None)
+            registry.CLASSES.pop(k, None)
+        registry.ALIASES.pop("tmp_probe", None)
+        registry.PLUGINS.pop()
+
+
+def test_plugin_roto_no_rompe_el_resto():
+    """Un archivo con error se reporta y las demas estrategias siguen vivas."""
+    import os
+    import tempfile
+    from bt import registry
+    path = os.path.join(tempfile.mkdtemp(), "roto.py")
+    with open(path, "w") as f:
+        f.write("esto no es python\n")
+    try:
+        registry._import_module("roto_tmp", "roto.py", path=path)
+        assert registry.PLUGINS[-1]["ok"] is False
+        assert registry.PLUGINS[-1]["error"]
+        assert registry.get_strategy("turtle20_10")[0] is not None
+    finally:
+        registry.PLUGINS.pop()
+
+
+def test_fondeo_objetivo_alcanzado():
+    """6000 -> 6480 (8%) sin pasarse del 8% de DD: APTO."""
+    from bt.funding import evaluate
+    eq = [6000, 6150, 6070, 6200, 6480]
+    ts = ["2026-01-01", "2026-01-01", "2026-01-02", "2026-01-02", "2026-01-03"]
+    f = evaluate(eq, ts, account=6000)
+    assert f["status"] == "APTO" and f["target_hit"] is True
+    assert f["max_loss"] == 480.0 and f["daily_max_loss"] == 240.0
+    assert f["max_dd"] < 8.0
+
+
+def test_fondeo_brecha_drawdown_total():
+    """Caer por debajo de 5520 rompe la cuenta aunque luego se recupere."""
+    from bt.funding import evaluate
+    eq = [6000, 5700, 5480, 6100]
+    ts = ["2026-01-01", "2026-01-02", "2026-01-03", "2026-01-04"]
+    f = evaluate(eq, ts, account=6000)
+    assert f["status"] == "NO APTO"
+    assert f["breach"] == "perdida total"
+    assert f["floor"] == 5520.0
+
+
+def test_fondeo_brecha_diaria():
+    """Perder el 4% en un mismo dia (240) rompe la cuenta."""
+    from bt.funding import evaluate
+    eq = [6000, 5750, 5900]
+    ts = ["2026-01-01", "2026-01-01", "2026-01-02"]
+    f = evaluate(eq, ts, account=6000)
+    assert f["status"] == "NO APTO"
+    assert f["breach"] == "perdida diaria"
+    assert f["max_daily_dd"] == round(250 / 6000 * 100, 2)  # 4.17% > 4%
+    # y justo por debajo del limite no hay brecha
+    ok = evaluate([6000, 5790, 5900], ts, account=6000)
+    assert ok["breach"] == "" and ok["max_daily_dd"] == 3.5
+
+
+def test_importador_detecta_y_rechaza_tf():
+    """El importador reconoce TF validas y rechaza M2/M4 sin etiquetarlas mal."""
+    from bt.importer import _guess_tf, _infer_tf, _symbol_from
+    import pandas as pd
+    assert _guess_tf("velas_M1.csv", [], "") == "M1"
+    assert _guess_tf("SwitchX1800_M3.csv", [], "") == "M3"
+    assert _guess_tf("M4.csv", [], "") == "M4"       # no soportada, se omite
+    df = pd.DataFrame({"timestamp": pd.to_datetime(
+        ["2026-01-01 00:00", "2026-01-01 00:02", "2026-01-01 00:04"], utc=True)})
+    assert _infer_tf(df) == "M2"
+    assert _symbol_from("SwitchX1800_Dataset/velas_M1.csv").lower().replace(" ", "") == "switchx1800"

@@ -1,0 +1,183 @@
+========================================================================
+ TURTLELAB - GUIA PARA CREAR Y CARGAR ESTRATEGIAS NUEVAS
+========================================================================
+ Esta guia esta en texto plano a proposito: se puede leer desde GitHub,
+ desde el Bloc de notas o pegarla en cualquier IA sin perder formato.
+
+ En el panel: vista Estrategias -> boton "Guia para crear estrategias".
+
+------------------------------------------------------------------------
+ 1. COMO FUNCIONA (en 20 segundos)
+------------------------------------------------------------------------
+ El motor (bt/) NO conoce ninguna estrategia de forma fija.
+ Las estrategias son "plugins": un archivo .py que se registra solo.
+
+   bt/plugins/*.py         -> estrategias que vienen incluidas
+   user_strategies/*.py    -> TUS estrategias (aqui añades las tuyas)
+
+ Al arrancar (o al pulsar "Recargar plugins"), TurtleLab lee esas
+ carpetas. Si un archivo tiene un error, el panel lo muestra en rojo y
+ el resto de estrategias siguen funcionando.
+
+ No hay que tocar panel_server.py, ni bt/backtest.py, ni bt/strategies.py.
+
+------------------------------------------------------------------------
+ 2. CREAR UNA ESTRATEGIA CON AYUDA DE UNA IA
+------------------------------------------------------------------------
+ Paso 1. Abre tu IA favorita (vale un modelo gratuito).
+ Paso 2. Copia el PROMPT de abajo y rellena las lineas entre < >.
+ Paso 3. Pega la respuesta en un archivo nuevo:
+            user_strategies/mi_idea.py
+ Paso 4. En el panel: Estrategias -> "Recargar plugins".
+ Paso 5. Aparece una tarjeta nueva. Elige temporalidades, capital y
+         simbolos, y pulsa "Correr".
+
+--------------------- PROMPT PARA LA IA (copiar) -----------------------
+Actua como programador de Python. Escribe UNA estrategia para el motor
+de backtesting TurtleLab.
+
+CONTRATO DEL MOTOR (obligatorio, no lo cambies):
+
+from bt.sdk import BaseStrategy, strategy, ema, sma, atr, rsi, donchian
+from bt.sdk import cross_up, cross_down
+import numpy as np
+
+@strategy(id="<clave_corta>", label="<nombre visible>", desc="<1-2 frases>",
+          rules=["<regla 1>", "<regla 2>", "..."],
+          tfs=["M15", "H1"], balance=50.0, params={"<param>": <valor>})
+class <NombreClase>(BaseStrategy):
+    name = "<clave_unica>"
+    defaults = {"<param>": <valor>}
+
+    def prepare(self, df, p):
+        # se ejecuta UNA vez con todo el historico; devuelve arrays numpy
+        # alineados con las filas de df
+        c = df["close"].to_numpy(float)
+        return {"c": c}
+
+    def entry_signal(self, df, i, ctx, p):
+        # 1 = comprar, -1 = vender, 0 = nada
+        return 0
+
+    def exit_signal(self, df, i, ctx, p, direction):
+        # True = cerrar la posicion abierta
+        return False
+
+    def stop_price(self, df, i, ctx, p, direction, entry_price):
+        # devuelve (stop_loss, take_profit); (None, None) si no aplica
+        a = ctx.get("atr")
+        if a is None or np.isnan(a[i]) or a[i] <= 0:
+            return None, None
+        if direction == 1:
+            return entry_price - 2.0 * a[i], None
+        return entry_price + 2.0 * a[i], None
+
+REGLAS QUE DEBES RESPETAR:
+- Sin look-ahead: solo se puede mirar la barra i y anteriores. Nunca i+1.
+- Columnas disponibles en df: timestamp, open, high, low, close,
+  tick_volume, spread.
+- prepare() es el unico sitio donde se calculan indicadores (rapido).
+- Devuelve arrays numpy, no listas de Python, y del mismo largo que df.
+- Si quieres que la operacion tenga stop obligatorio, incluye "sl_mult"
+  en defaults.
+- Nada de librerias nuevas: solo numpy y lo que exporta bt.sdk.
+- Nada de leer archivos, red, ni estado global.
+
+MI IDEA DE ESTRATEGIA:
+<explica aqui la idea en lenguaje normal: que debe pasar para comprar,
+ que debe pasar para vender, cuando salir, y en que temporalidad>
+
+Devuelve SOLO el codigo del archivo, listo para guardar.
+--------------------- FIN DEL PROMPT -----------------------------------
+
+------------------------------------------------------------------------
+ 3. QUE PUEDES USAR DENTRO DE prepare()
+------------------------------------------------------------------------
+ ema(valores, periodo)      media exponencial (devuelve array con NaN al
+                            principio, igual que MT5)
+ sma(valores, periodo)      media simple
+ atr(df, periodo)           Average True Range (Wilder)
+ rsi(cierres, periodo)      RSI (Wilder)
+ donchian(df, periodo, shift=1)  canal: devuelve (maximos, minimos)
+ cross_up(a, b, i)          True si a cruza a b hacia arriba en i
+ cross_down(a, b, i)        True si a cruza a b hacia abajo en i
+
+ Para un indicador que no exista, calculalo a mano con numpy dentro de
+ prepare(). Ejemplo: media de 20 barras
+     ma = np.convolve(c, np.ones(20) / 20, mode="full")[:len(c)]
+     ma[:19] = np.nan
+
+------------------------------------------------------------------------
+ 4. COMO CARGARLA (dos formas)
+------------------------------------------------------------------------
+ A) En caliente, sin reiniciar:
+    Panel -> Estrategias -> "Recargar plugins".
+    La tarjeta nueva aparece al instante.
+
+ B) Reiniciando el panel:
+    Cierra la consola y vuelve a abrir TURTLE_APP.bat.
+
+ Para quitarla: borra el archivo y pulsa "Recargar plugins".
+ Para cambiar parametros de una ya existente: edita `defaults` y recarga.
+
+------------------------------------------------------------------------
+ 5. VARIAS VARIANTES DE LA MISMA ESTRATEGIA
+------------------------------------------------------------------------
+ Una clase puede publicar varios presets (como Tortuga 20/10, 20/20 y
+ 55/20). Se hace con add_preset desde el mismo archivo:
+
+     from bt.sdk import add_preset
+     add_preset(MiClase, "mi_idea_rapida", params={"periodo": 9},
+                label="Mi idea (rapida)", desc="...", rules=["..."],
+                tfs=["M15"], balance=50.0, order=210)
+
+ Ojo: `id` y `params` son lo que ejecuta el motor; `label`, `desc`,
+ `rules` y `tfs` son lo que ves en el panel. No mezcles numeros: el
+ motor siempre usa `defaults` + `params`.
+
+------------------------------------------------------------------------
+ 6. BUENAS PRACTICAS (para no engañarte a ti mismo)
+------------------------------------------------------------------------
+ - Una idea = un archivo. Asi puedes borrarla sin romper nada.
+ - Escribe las reglas en `rules` ANTES de programar. Si no las puedes
+   explicar en 5 lineas, no es una estrategia mecanica.
+ - Prueba primero en 1 simbolo y 1 temporalidad ("1 símbolo" en la
+   tarjeta). Si no hay operaciones, revisa las condiciones.
+ - Despues corre en todos los simbolos y mira DD total y DD diario:
+   esa es la metrica que decide si sirve para una cuenta de fondeo.
+ - Nunca cambies el motor para que una estrategia gane. Si hay que
+   cambiar el motor, se cambia para TODAS por igual.
+ - Los resultados se guardan en results/BT-XXXXXX y no se sobrescriben.
+
+------------------------------------------------------------------------
+ 7. METRICA DE FONDEO (que mira el panel)
+------------------------------------------------------------------------
+ Cada backtest guarda funding.json con:
+   - cuenta de referencia (por defecto $6,000)
+   - DD total maximo permitido: 8% ($480)
+   - DD diario maximo permitido: 4% ($240, medido en UTC)
+   - objetivo de beneficio neto: 8% ($480)
+   - estado: APTO / NO APTO / SIN OBJETIVO
+ La cuenta de fondeo es SIEMPRE $6,000. Si la prueba corre con otro
+ capital (por ejemplo $10), la curva se reescala proporcionalmente a
+ $6,000 antes de medir DD y objetivo: nunca se inventan importes.
+
+ Para recalcular resultados antiguos:
+     python scripts/backfill_funding.py --limit 600
+
+------------------------------------------------------------------------
+ 8. SI ALGO NO CARGA
+------------------------------------------------------------------------
+ - El panel muestra el error exacto en la tarjeta "Plugins".
+ - "estrategia desconocida": el `id` del preset y el `name` de la clase
+   no coinciden con lo que pide el panel. Recarga plugins.
+ - "Ninguna temporalidad pedida existe en los datos": el simbolo no
+   tiene esa TF. Mira la vista Datos.
+ - Errores de numpy con NaN: usa np.isnan(...).any() antes de comparar.
+
+ Todo el codigo del motor es deterministico y sin IA en runtime: la IA
+ solo ayuda a escribir el archivo, nunca decide operaciones.
+
+========================================================================
+ Fin de la guia. Licencia MIT: usa, copia y modifica libremente.
+========================================================================

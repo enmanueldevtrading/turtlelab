@@ -1,0 +1,13 @@
+{
+  "spread": 6440,
+  "trade_tick_value": 0.001,
+  "trade_tick_size": 0.001,
+  "volume_min": 0.01,
+  "volume_max": 3.0,
+  "volume_step": 0.01,
+  "trade_contract_size": 1.0,
+  "digits": 3,
+  "point": 0.001,
+  "trade_mode": 4,
+  "point_price": 6.44
+}

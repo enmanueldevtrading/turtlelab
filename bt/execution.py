@@ -23,6 +23,11 @@ class ExecConfig:
     spike_k: float = 0.0        # filtro de picos en x ATR%; 0 = APAGADO (defecto aprobado)
     spike_cooldown: int = 3     # velas bloqueadas tras un pico (solo si k>0)
     spike_close: bool = False   # cerrar la posicion abierta cuando hay pico (solo si k>0)
+    # Reglas de cuenta de fondeo (prop firm), en % de la cuenta.
+    funding_account: float = 6000.0    # cuenta de fondeo (siempre 6000)
+    funding_max_dd_pct: float = 8.0     # perdida total maxima
+    funding_daily_dd_pct: float = 4.0   # perdida diaria maxima
+    funding_target_pct: float = 8.0     # objetivo de beneficio neto
 
 
 def quantize(lot, step, min_lot, max_lot):

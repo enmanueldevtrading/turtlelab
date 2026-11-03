@@ -52,18 +52,46 @@ Doble clic en `STOP_TURTLE.bat` o cierra la ventana de consola / Ctrl+C.
 
 ```
 TurtleLab/
-├── bt/                  # Motor de backtest (6 estrategias, ejecución, métricas)
+├── bt/                  # Motor de backtest (ejecución, métricas, fondeo)
+│   ├── registry.py      # Registro de estrategias (descubre plugins)
+│   ├── sdk.py           # Contrato que cumple toda estrategia
+│   └── plugins/         # Estrategias incluidas (turtle.py, ema.py, vwap.py)
+├── user_strategies/     # TUS estrategias: suelta un .py y aparece en el panel
+├── web/                 # Interfaz (index.html, app.css, app.js, logo.svg)
 ├── panel_server.py      # Panel web (stdlib, sin dependencias externas)
-├── scripts/             # Utilidades: descarga, validación, backtest, tests
-├── tests/               # 25 pruebas del motor
-├── data/                # Datos locales (Weltrade M1-M5, Yahoo)
+├── scripts/             # Descarga MT5, importación, validación, tests
+├── tests/               # 32 pruebas del motor
+├── data/                # Datos locales (Weltrade M1-D1, Yahoo) — NO se versiona
 ├── results/             # Backtests guardados (BT-XXXXXX)
+├── GUIA_ESTRATEGIAS.txt # Cómo crear y cargar estrategias nuevas (con IA)
 ├── TURTLE_APP.bat       # Lanzador principal
 ├── STOP_TURTLE.bat      # Detener aplicación
 └── requirements.txt     # Dependencias Python
 ```
 
+## Datos locales (no están en GitHub)
+
+`data/weltrade/` ocupa ~162 MB (41 símbolos × 8 temporalidades en CSV gzip), así que
+`.gitignore` lo excluye: el repositorio solo lleva código. Para tener los datos en tu
+máquina:
+
+Desde el propio panel (**Datos → Importar datos desde MT5**) eliges pares,
+temporalidades, cuántas velas y el tipo de dato (velas, tick a tick o foto del
+libro de órdenes). También por consola:
+
+```powershell
+python scripts/download_data.py                 # desde MT5 (Weltrade abierto)
+python scripts/import_data.py                   # importa SwitchX1800_Dataset y auditoria_total
+```
+
+El panel detecta todo solo: vista **Datos**, con cada par agrupado por familia y
+todas sus temporalidades a la vista (328 archivos / 41 pares).
+Para compartirlos sin subir 162 MB, `python scripts/data_pack.py pack` crea un ZIP
+con un subconjunto (ver `data/README.md`).
+
 ## Estrategias disponibles
+
+Cada estrategia es un plugin independiente en `bt/plugins/`:
 
 1. **Tortuga 20/10** (turtle20_10): Donchian breakout con trailing stop.
 2. **Tortuga 20/20** (turtle20_20): Donchian breakout simétrico.
@@ -72,13 +100,23 @@ TurtleLab/
 5. **EMA 30/75/150** (ema30_75_150): Triple EMA con filtro de tendencia.
 6. **VWAP Sesiones** (vwap_session): Reversión a VWAP por sesiones.
 
+### Añadir estrategias nuevas (sin tocar el motor)
+
+Suelta un archivo `.py` en `user_strategies/` y pulsa **Recargar plugins** en el panel.
+No hace falta editar `bt/strategies.py` ni reiniciar. Si un archivo tiene un error, el
+panel lo marca en rojo y las demás estrategias siguen funcionando.
+Guía completa con prompt para IA: [GUIA_ESTRATEGIAS.txt](GUIA_ESTRATEGIAS.txt)
+
 ## Funcionalidades
 
 - **Motor de backtest** reproducible (BT-ID, hashes, sin look-ahead).
-- **Panel web** con 5 vistas: Datos, Estrategias, Trabajo, Pruebas, Monte Carlo.
+- **Panel web** con 6 vistas: Datos, Estrategias, Trabajo, Pruebas, Fondeo, Monte Carlo.
+- **Estrategias modulares**: plugins descubiertos en caliente (`bt/plugins/`, `user_strategies/`).
+- **Métrica de fondeo**: cuenta de $6,000, DD total ≤8% ($480), DD diario ≤4% ($240, UTC),
+  objetivo +8% ($480). Veredicto APTO / NO APTO / SIN OBJETIVO guardado en cada `funding.json`.
 - **Costes reales** por símbolo de MT5 (spread, lote min/max, deslizamiento).
 - **Monte Carlo** con shuffle/bootstrap y semilla reproducible.
-- **25 pruebas automatizadas** del motor (100% pasan).
+- **32 pruebas automatizadas** del motor (100% pasan).
 - **Optimización de recursos**: caché, sin polling innecesario, un solo proceso.
 
 ## Cómo colaborar con modelos gratuitos de IA
@@ -97,7 +135,7 @@ El proyecto puede mantenerse y mejorarse utilizando modelos gratuitos de IA:
 python scripts/run_bt_tests.py
 ```
 
-Resultado esperado: 25/25 passed.
+Resultado esperado: 32/32 passed.
 
 
 ## Metodologia de metricas

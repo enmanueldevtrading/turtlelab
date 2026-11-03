@@ -10,6 +10,7 @@ from .indicators import atr as atr_fn
 from .metrics import compute_metrics
 from .spike import detect as detect_spikes
 from .strategies import get_strategy
+from .funding import evaluate as funding_evaluate
 
 _counter_path = os.path.join(RESULTS_ROOT, "_counter.txt")
 
@@ -150,6 +151,14 @@ def run_backtest(df: pd.DataFrame, strategy_key: str, strategy_params: dict,
             pf.close(pos, last_ts, last_px, "FIN DE DATOS", exit_idx=n - 1)
 
     metrics = compute_metrics(exec_cfg.initial_balance, pf.trades, pf.equity_curve)
+    # Veredicto de cuenta de fondeo sobre la curva de capital real del backtest.
+    funding = funding_evaluate(
+        pf.equity_curve, stamps,
+        account=getattr(exec_cfg, "funding_account", 6000.0),
+        base=exec_cfg.initial_balance,
+        max_dd_pct=getattr(exec_cfg, "funding_max_dd_pct", 8.0),
+        daily_dd_pct=getattr(exec_cfg, "funding_daily_dd_pct", 4.0),
+        target_pct=getattr(exec_cfg, "funding_target_pct", 8.0))
     cfg = {"strategy": strategy_key, "params": params, "symbol": symbol,
            "timeframe": timeframe, "rows": n,
            "from": str(stamps[0]), "to": str(stamps[n - 1]),
@@ -163,7 +172,7 @@ def run_backtest(df: pd.DataFrame, strategy_key: str, strategy_params: dict,
     if metrics["total"] == 0:
         return {"bt_id": None, "config_hash": "", "config": cfg,
                 "metrics": metrics, "trades": [], "equity_curve": [],
-                "created": int(time.time()), "empty": True}
+                "funding": funding, "created": int(time.time()), "empty": True}
     digest = hashlib.sha256(json.dumps(cfg, sort_keys=True, default=str).encode()).hexdigest()[:12]
     # Solo consume un BT-ID cuando se guarda de verdad. Si save=False (optimize, MC),
     # no toca el contador ni crea carpeta: evita huecos en results/.
@@ -176,11 +185,14 @@ def run_backtest(df: pd.DataFrame, strategy_key: str, strategy_params: dict,
         pd.DataFrame(pf.trades).to_csv(os.path.join(outdir, "trades.csv"), index=False)
         with open(os.path.join(outdir, "metrics.json"), "w") as f:
             json.dump(metrics, f, indent=2, default=str)
-        pd.DataFrame({"equity": pf.equity_curve}).to_csv(
+        pd.DataFrame({"timestamp": stamps, "equity": pf.equity_curve}).to_csv(
             os.path.join(outdir, "equity.csv"), index=False)
+        with open(os.path.join(outdir, "funding.json"), "w") as f:
+            json.dump(funding, f, indent=2, default=str)
     else:
         bt_id = None
     result = {"bt_id": bt_id, "config_hash": digest, "config": cfg,
               "metrics": metrics, "trades": pf.trades,
-              "equity_curve": pf.equity_curve, "created": int(time.time())}
+              "equity_curve": pf.equity_curve, "funding": funding,
+              "created": int(time.time())}
     return result

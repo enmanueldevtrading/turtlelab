@@ -20,10 +20,21 @@ __pycache__/
 results/BT-*/
 results/_counter.txt
 results/inventory_cache.json
+results/_index.json
+results/_index.json.tmp
 
-# Datos descargados (grandes, regenerables)
-data/weltrade/
-data/yahoo/
+# Datos descargados (grandes, regenerables).
+# En el repositorio solo viaja el histórico diario/4h/1h (ligero y útil para
+# probar sin MT5). Las temporalidades intradía (M1-M30) se descargan de MT5.
+data/weltrade/*
+!data/weltrade/.gitkeep
+!data/weltrade/*/
+!data/weltrade/*/D1.csv.gz
+!data/weltrade/*/H4.csv.gz
+!data/weltrade/*/H1.csv.gz
+!data/weltrade/*/info.json
+data/yahoo/*
+!data/yahoo/.gitkeep
 SwitchX1800_Dataset/
 *.zip
 
@@ -121,3 +132,11 @@ quant_lab.err.log
 quant_lab.log
 *.db
 *.sqlite
+
+# Excepciones: documentacion de datos si se versiona
+!data/README.md
+
+# Excepción al *.csv.gz global: el histórico diario/4h/1h sí se versiona
+!data/weltrade/*/D1.csv.gz
+!data/weltrade/*/H4.csv.gz
+!data/weltrade/*/H1.csv.gz

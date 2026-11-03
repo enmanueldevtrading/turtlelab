@@ -7,7 +7,10 @@ from bt.downloader import connect, available_symbols, MT5_PATH_DEFAULT
 
 FIELDS = ["spread", "trade_tick_value", "trade_tick_size", "volume_min",
           "volume_max", "volume_step", "trade_contract_size", "digits",
-          "point", "trade_mode"]
+          "point", "trade_mode",
+          # costes reales del broker (Weltrade los publica en MT5)
+          "swap_long", "swap_short", "swap_mode", "swap_rollover3days",
+          "currency_profit", "margin_initial", "description", "path"]
 
 
 def main():
