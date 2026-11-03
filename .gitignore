@@ -25,9 +25,8 @@ results/_index.json.tmp
 
 # Datos de Weltrade: SI se versionan los 41 índices sintéticos con todas
 # sus temporalidades (M1-M30, H1, H4, D1) y el info.json real de MT5.
-# Yahoo NO se versiona: no es data de Weltrade.
-data/yahoo/*
-!data/yahoo/.gitkeep
+# Yahoo: se versiona lo descargado con yfinance (no es data de Weltrade,
+# pero se guarda tal cual para poder probar sin conexion).
 SwitchX1800_Dataset/
 *.zip
 
@@ -136,3 +135,6 @@ quant_lab.log
 
 # Excepcion al *.csv.gz global: la data de Weltrade si se versiona.
 !data/weltrade/*/*.csv.gz
+
+# Excepcion al *.csv.gz global: la data de Yahoo descargada si se versiona.
+!data/yahoo/*/*.csv.gz
