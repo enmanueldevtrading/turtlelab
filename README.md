@@ -71,9 +71,18 @@ TurtleLab/
 
 ## Datos locales (no están en GitHub)
 
-`data/weltrade/` ocupa ~162 MB (41 símbolos × 8 temporalidades en CSV gzip), así que
-`.gitignore` lo excluye: el repositorio solo lleva código. Para tener los datos en tu
-máquina:
+Todo son **índices sintéticos de Weltrade** (41 pares). Cada par vive en
+`data/weltrade/<PAR>/` con un archivo por temporalidad:
+
+| Qué | Dónde | ¿Está en GitHub? |
+|---|---|---|
+| Velas D1, H4, H1 | `data/weltrade/<PAR>/<TF>.csv.gz` | **Sí** (123 archivos, 17,9 MB) |
+| Velas M1–M30 | `data/weltrade/<PAR>/<TF>.csv.gz` | No (se bajan de MT5 desde el panel) |
+| Costes del par | `data/weltrade/<PAR>/info.json` | **Sí** (spread, swap, lote, tick) |
+
+Las 8 temporalidades completas ocupan ~162 MB, demasiado para un repositorio (y se
+pueden regenerar), por eso solo viaja el histórico de D1/H4/H1. Para completar tu
+copia en local:
 
 Desde el propio panel (**Datos → Importar datos desde MT5**) eliges pares,
 temporalidades, cuántas velas y el tipo de dato (velas, tick a tick o foto del
@@ -84,8 +93,17 @@ python scripts/download_data.py                 # desde MT5 (Weltrade abierto)
 python scripts/import_data.py                   # importa SwitchX1800_Dataset y auditoria_total
 ```
 
-El panel detecta todo solo: vista **Datos**, con cada par agrupado por familia y
-todas sus temporalidades a la vista (328 archivos / 41 pares).
+El panel detecta todo solo: vista **Datos**, con cada par agrupado por familia, sus
+temporalidades y los costes reales que publica Weltrade en MT5.
+
+### Costes: qué se puede descargar y qué no
+
+- **Spread**: sí. Se lee de MT5 y se guarda por par en `info.json` (p. ej. 74 puntos = 0,74).
+- **Swap** (mantenimiento nocturno): sí, MT5 lo publica por par (`swap_long` / `swap_short`).
+  Se rellena al descargar ese par desde el panel.
+- **Lote mínimo/máximo/paso y valor del tick**: sí, también de MT5.
+- **Comisión**: **no**. MT5 no la publica; depende de tu cuenta de Weltrade, así que se
+  configura en cada backtest (por defecto 0).
 Para compartirlos sin subir 162 MB, `python scripts/data_pack.py pack` crea un ZIP
 con un subconjunto (ver `data/README.md`).
 
